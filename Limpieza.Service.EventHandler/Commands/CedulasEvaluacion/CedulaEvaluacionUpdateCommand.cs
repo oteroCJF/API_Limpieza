@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Limpieza.Domain.DCedulaEvaluacion;
 using System.Collections.Generic;
+using System;
 
 namespace Limpieza.Service.EventHandler.Commands.CedulasEvaluacion
 {
@@ -15,5 +16,8 @@ namespace Limpieza.Service.EventHandler.Commands.CedulasEvaluacion
         public bool Calcula { get; set; }
         public string Estatus { get; set; }
         public string Observaciones { get; set; }
+        public DateTime FechaActualizacion { get; set; }
+        public virtual List<ServicioContratoDto> Penalizacion { get; set; }
+
     }
 }

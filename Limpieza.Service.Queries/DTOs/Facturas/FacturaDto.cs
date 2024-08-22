@@ -5,7 +5,8 @@ namespace Limpieza.Service.Queries.DTOs.Facturas
     public class FacturaDto
     {
         public int Id { get; set; }
-        public int? RepositorioId { get; set; }
+        //public int? RepositorioId { get; set; }
+        public Nullable<int> RepositorioId { get; set; }
         public int EstatusId { get; set; }
         public int? InmuebleId { get; set; }
         public string UsuarioId { get; set; } = string.Empty;

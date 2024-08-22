@@ -29,19 +29,20 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
             {
                 CedulaEvaluacion cedula = _context.CedulaEvaluacion.FirstOrDefault(c => c.Id == request.Id);
 
-                List<Factura> facturas = _context.Facturas
-                                                               .Where(f => f.RepositorioId == request.RepositorioId &&
-                                                                           f.InmuebleId == cedula.InmuebleId && f.Tipo.Equals("Factura")
-                                                                           && f.Facturacion.Equals("Mensual"))
-                                                               .ToList();
-                List<Factura> notasCredito = _context.Facturas
+                if (request.Calcula)
+                {
+                    List<Factura> facturas = _context.Facturas
+                                                                   .Where(f => f.RepositorioId == request.RepositorioId &&
+                                                                               f.InmuebleId == cedula.InmuebleId && f.Tipo.Equals("Factura")
+                                                                               && f.Facturacion.Equals("Mensual"))
+                                                                   .ToList();
+
+                    List<Factura> notasCredito = _context.Facturas
                                                                .Where(f => f.RepositorioId == request.RepositorioId &&
                                                                            f.InmuebleId == cedula.InmuebleId && f.Tipo.Equals("NC")
                                                                            && f.Facturacion.Equals("Mensual"))
                                                                .ToList();
 
-                if (request.Calcula)
-                {
                     List<CuestionarioMensual> cuestionarioMensual = _context.CuestionarioMensual
                                                                 .Where(cm => cm.Anio == cedula.Anio && cm.MesId == cedula.MesId && cm.ContratoId == cedula.ContratoId)
                                                                 .ToList();
@@ -66,41 +67,37 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
                     else
                     {
                         cedula.Penalizacion = 0;
+                        cedula.EstatusId = request.EstatusId;
+                        cedula.Bloqueada = false;
                     }
                     cedula.FechaActualizacion = DateTime.Now;
-                }
-                else
-                {
-                    cedula.EstatusId = request.EstatusId;
-                    cedula.Bloqueada = false;
-                    cedula.FechaActualizacion = DateTime.Now;
-                }
-                
-                await _context.SaveChangesAsync();
-
-                foreach(var fac in facturas)
-                {
-                    fac.EstatusId = request.EFacturaId;
 
                     await _context.SaveChangesAsync();
-                }
-                
-                foreach(var fac in notasCredito)
-                {
-                    fac.EstatusId = request.ENotaCreditoId;
 
-                    await _context.SaveChangesAsync();
-                }
+                    foreach (var fac in facturas)
+                    {
+                        fac.EstatusId = request.EFacturaId;
 
-                return cedula;
-            }
+                        await _context.SaveChangesAsync();
+                    }
+
+                    foreach (var fac in notasCredito)
+                    {
+                        fac.EstatusId = request.ENotaCreditoId;
+
+                        await _context.SaveChangesAsync();
+                    }
+                    }
+
+                    return cedula;
+                }
             catch (Exception ex)
             {
                 string msg = ex.Message;
                 return null;
             }
-        }        
-        
+        }
+
         private async Task<List<RespuestaEvaluacion>> Obtienetotales(int cedula, List<CuestionarioMensual> cuestionario)
         {
             var incidencias = new List<Incidencia>();
@@ -111,8 +108,9 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
                                                             && !i.FechaEliminacion.HasValue).ToList();
                 var respuesta = _context.Respuestas.SingleOrDefault(r => r.CedulaEvaluacionId == cedula && r.Pregunta == cm.Consecutivo);
 
-                if (!respuesta.Detalles.Equals("N/A")) {
-                    if(incidencias.Where(i => i.Inasistencias != 0).Count() != 0)
+                if (!respuesta.Detalles.Equals("N/A"))
+                {
+                    if (incidencias.Where(i => i.Inasistencias != 0).Count() != 0)
                     {
                         respuesta.Detalles = incidencias.Where(i => i.Inasistencias != 0).Sum(i => i.Inasistencias) + "";
                     }
@@ -148,12 +146,12 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
                 if (cm.ACLRS == rs.Respuesta)
                 {
                     incidencias = _context.Incidencias.Where(i => i.CedulaEvaluacionId == cedula && i.Pregunta == cm.Consecutivo && !i.FechaEliminacion.HasValue).ToList();
-                    
+
                     if (incidencias.Count() != 0)
                     {
                         if (dtPregunta.Concepto.Equals("Inasistencias"))
                         {
-                            ponderacion = incidencias.Sum(i => i.Inasistencias) > 0 ? GetPonderacionInasistencias(cedula, (int)cm.Ponderacion, Convert.ToInt32(rs.Detalles)): (int)cm.Ponderacion;
+                            ponderacion = incidencias.Sum(i => i.Inasistencias) > 0 ? GetPonderacionInasistencias(cedula, (int)cm.Ponderacion, Convert.ToInt32(rs.Detalles)) : (int)cm.Ponderacion;
                         }
                         else if (dtPregunta.Concepto.Equals("MaquinariaEH") || dtPregunta.Concepto.Equals("ActividadesPO"))
                         {
@@ -168,10 +166,10 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
 
                     calificacion += ponderacion;
 
-                    rs.Detalles = incidencias+"";
+                    rs.Detalles = incidencias + "";
                     rs.Penalizable = true;
-                    rs.MontoPenalizacion = _context.Incidencias.Where(i => i.CedulaEvaluacionId == cedula && 
-                                                                      i.Pregunta == cm.Consecutivo && 
+                    rs.MontoPenalizacion = _context.Incidencias.Where(i => i.CedulaEvaluacionId == cedula &&
+                                                                      i.Pregunta == cm.Consecutivo &&
                                                                       !i.FechaEliminacion.HasValue).Sum(i => i.MontoPenalizacion);
 
                     await _context.SaveChangesAsync();
@@ -187,7 +185,7 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
 
             calificacion = Convert.ToDecimal(calificacion / respuestas.Count());
 
-            if(calificacion >= Convert.ToDecimal(8))
+            if (calificacion >= Convert.ToDecimal(8))
             {
                 calificacion += 1;
             }
