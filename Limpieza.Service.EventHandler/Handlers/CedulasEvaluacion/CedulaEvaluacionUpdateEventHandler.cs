@@ -25,6 +25,7 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
 
         public async Task<CedulaEvaluacion> Handle(CedulaEvaluacionUpdateCommand request, CancellationToken cancellationToken)
         {
+
             try
             {
                 CedulaEvaluacion cedula = _context.CedulaEvaluacion.FirstOrDefault(c => c.Id == request.Id);
@@ -53,7 +54,8 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
                     cedula.EstatusId = request.EstatusId;
                     if (calificacion < 10)
                     {
-                        string calif = calificacion.ToString().Substring(0, 3);
+                        //string calif = calificacion.ToString().Substring(0, 4);
+                        string calif = (Math.Round(calificacion, 1)).ToString();
                         cedula.Calificacion = Convert.ToDouble(calif);
                     }
                     else
@@ -62,7 +64,14 @@ namespace Limpieza.Service.EventHandler.Handlers.CedulasEvaluacion
                     }
                     if (calificacion < Convert.ToDecimal(8))
                     {
+                        //decimal aux = (Convert.ToDecimal(facturas.Sum(f => f.Subtotal)) * Convert.ToDecimal(0.01));
+                        //aux = Math.Round(aux, 2);
+
+                        //cedula.Penalizacion = aux / Math.Round(calificacion, 1);
+                        //cedula.Penalizacion = (Convert.ToDecimal(facturas.Sum(f => f.Subtotal)) * Convert.ToDecimal(0.01)) / Math.Round(calificacion,1);
                         cedula.Penalizacion = (Convert.ToDecimal(facturas.Sum(f => f.Subtotal)) * Convert.ToDecimal(0.01)) / calificacion;
+                        cedula.Penalizacion = Math.Round(cedula.Penalizacion, 2);
+
                     }
                     else
                     {
